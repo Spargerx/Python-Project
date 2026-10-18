@@ -1,28 +1,15 @@
-"""Practice Progress and Learning Curve Analysis
-
-Generates (or loads) practice-session data, adds pace/accuracy metrics,
-classifies each learner's progress pattern, and saves CSV summaries + charts.
-
-Usage:
-    python practice_progress.py                      # build sample data and analyze it
-    python practice_progress.py --seed 5             # different sample data
-    python practice_progress.py --input sessions.csv # analyze your own data
-    python practice_progress.py --output-dir out     # change where files are saved
-
-Progress patterns describe practice results only; they do not measure intelligence.
-"""
+"""Practice Progress and Learning Curve Analysis"""
 
 import argparse
 from pathlib import Path
 
 import matplotlib
 
-matplotlib.use("Agg")  # file-only backend: works on servers/CI with no display
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
-# __file__ is undefined in notebooks/REPLs, so fall back to the working directory.
 ROOT = Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd()
 
 TOPICS = ["Fractions", "Algebra", "Geometry", "Word Problems"]
@@ -34,23 +21,23 @@ TOPIC_ACCURACY_OFFSET = {"Fractions": 2, "Algebra": 0, "Geometry": -1.5, "Word P
 DIFFICULTY_ACCURACY_OFFSET = {"Easy": 3, "Medium": 0, "Hard": -4}
 
 # Analysis thresholds (kept in one place so they are easy to tune).
-ACCURACY_THRESHOLD = 80        # % accuracy counted as "accurate"
-PACE_TOLERANCE = 1.15          # speed_ratio <= this counts as "on pace"
-RECENT_WINDOW = 6              # sessions used for plateau/consistency checks
-MIN_SESSIONS_FOR_TREND = 6     # fewer sessions -> "Insufficient data"
-STEADY_SLOPE_PP = 0.6          # pp/session needed to call progress "steady"
-DECLINE_SLOPE_PP = -0.3        # pp/session below this is flagged as declining
-PLATEAU_GAIN_PP = 3            # |recent gain| below this can indicate a plateau
-PLATEAU_RANGE_PP = 12          # recent accuracy range below this can indicate a plateau
-INCONSISTENT_STD_PP = 10       # recent std-dev at/above this = inconsistent
+ACCURACY_THRESHOLD = 80
+PACE_TOLERANCE = 1.15
+RECENT_WINDOW = 6
+MIN_SESSIONS_FOR_TREND = 6
+STEADY_SLOPE_PP = 0.6
+DECLINE_SLOPE_PP = -0.3
+PLATEAU_GAIN_PP = 3
+PLATEAU_RANGE_PP = 12
+INCONSISTENT_STD_PP = 10
 
 REQUIRED_COLUMNS = {"student", "session_number", "topic", "questions_attempted",
                     "accuracy_pct", "time_taken_minutes", "hints_used", "difficulty"}
 
 
-# --------------------------------------------------------------------------- #
+
 # Data creation / loading / validation
-# --------------------------------------------------------------------------- #
+
 def build_practice_dataset(seed=17):
     """Create reproducible sample sessions with varied progress patterns."""
     rng = np.random.default_rng(seed)
@@ -108,9 +95,9 @@ def validate_dataset(data):
         raise ValueError("Duplicate (student, session_number) rows found.")
 
 
-# --------------------------------------------------------------------------- #
+
 # Calculations
-# --------------------------------------------------------------------------- #
+
 def recommend(accuracy_pct, speed_ratio, difficulty):
     """Core Python logic: revision recommendation from BOTH accuracy and speed."""
     accurate = accuracy_pct >= ACCURACY_THRESHOLD
@@ -156,8 +143,7 @@ def classify_progress(student_sessions):
                 "recent_accuracy_std_dev": np.nan,
                 "recent_accuracy_gain_pp": np.nan}
 
-    # Use real session numbers (the original used 0..n-1, which is wrong if
-    # sessions were skipped).
+    # Use real session numbers (the original used 0..n-1, which is wrong if sessions were skipped).
     slope = float(np.polyfit(session_numbers, accuracy, 1)[0])
     recent = accuracy[-RECENT_WINDOW:]
     variability = float(np.std(recent, ddof=1))  # sample std-dev for a small window
@@ -225,9 +211,8 @@ def make_summaries(data):
     return student, topic, overall
 
 
-# --------------------------------------------------------------------------- #
 # Charts
-# --------------------------------------------------------------------------- #
+
 def save_charts(data, topic_summary, student_summary, report_dir):
     """Save rolling accuracy, topic comparison, and pace charts."""
     fig, axes = plt.subplots(1, 3, figsize=(18, 5))
@@ -258,9 +243,8 @@ def save_charts(data, topic_summary, student_summary, report_dir):
     plt.close(fig)
 
 
-# --------------------------------------------------------------------------- #
 # Entry point
-# --------------------------------------------------------------------------- #
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="Practice progress and learning curve analysis")
     parser.add_argument("--seed", type=int, default=17, help="seed for the sample data")
